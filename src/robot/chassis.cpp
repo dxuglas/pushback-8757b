@@ -1,5 +1,6 @@
 #include "chassis.h"
 #include "../include/utils/check_threshold.h"
+#include "utils/pose.h"
 
 Chassis::Chassis(std::initializer_list<int8_t> left_drive_motor_ports, 
                  std::initializer_list<int8_t> right_drive_motor_ports, 
@@ -13,4 +14,12 @@ Chassis::Chassis(std::initializer_list<int8_t> left_drive_motor_ports,
 void Chassis::tank(float left_joystick_y_position, float right_joystick_y_position) {
     l_motors.move(check_threshold(left_joystick_y_position, l_deadzone));
     r_motors.move(check_threshold(right_joystick_y_position, r_deadzone));
+}
+
+void Chassis::set_pose(float x, float y, float heading) {
+    Chassis::pose = {x, y, heading};
+}
+
+void Chassis::set_pose(Pose pose) {
+    Chassis::pose = pose;
 }
