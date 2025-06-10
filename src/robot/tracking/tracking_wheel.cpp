@@ -2,10 +2,10 @@
 #include "pros/rotation.hpp"
 #include <cmath>
 
-TrackingWheel::TrackingWheel(pros::Rotation* encoder, float diameter, float center_offset)
+TrackingWheel::TrackingWheel(pros::Rotation* encoder, float diameter, float offset)
     : encoder(encoder), 
     diameter(diameter), 
-    center_offset(center_offset), 
+    offset(offset), 
     last_total(get_distance_total()) {}
 
 float TrackingWheel::get_distance_total() {
