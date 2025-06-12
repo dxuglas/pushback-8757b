@@ -33,7 +33,7 @@ private:
     float r_deadzone;
 
     // Odometry
-    Pose pose = {0, 0, 0};
+    Pose pose = {0.0f, 0.0f, 0.0f};
 };
 
 #endif // CHASSIS_H
