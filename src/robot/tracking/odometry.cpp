@@ -68,21 +68,21 @@ struct Delta2D {
 };
 
 static Delta2D kalman_fuse_translation (
-    const std::vector<TrackingWheelData>& horizontals, 
-    const std::vector<TrackingWheelData>& verticals, 
+    const std::vector<TrackingWheelData>& h_wheels, 
+    const std::vector<TrackingWheelData>& v_wheels, 
     double d_theta, double& p_x, double& p_y, double r, double q) 
 {
     double dy_sum = 0, dx_sum = 0;
     int dy_count = 0, dx_count = 0;
 
-    for (const auto& wheel : horizontals) {
+    for (const auto& wheel : h_wheels) {
         double dy = (std::abs(d_theta) < 1e-8) ? wheel.distance : 2 * std::sin(d_theta / 2) * ((wheel.distance / d_theta) + wheel.offset);
         double k = p_y / (p_y + r);
         dy_sum += k * dy;
         dy_count++;
         p_y = (1 - k) * p_y + q;
     }
-    for (const auto& wheel : verticals) {
+    for (const auto& wheel : v_wheels) {
         double dx = (std::abs(d_theta) < 1e-8) ? wheel.distance : 2 * std::sin(d_theta / 2) * ((wheel.distance / d_theta) + wheel.offset);
         double k = p_x / (p_x + r);
         dx_sum += k * dx;
