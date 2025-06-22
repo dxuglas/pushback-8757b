@@ -4,6 +4,7 @@
 #include "utils/angle.h"
 #include "utils/pose.h"
 #include <cmath>
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -104,26 +105,48 @@ static void update_global_pose(Pose& pose, const Delta2D& d_translation, double 
     pose.heading = heading;
 }
 
-Odometry::Odometry(std::vector<pros::IMU*> imus, 
+void Odometry::configure(
+    std::vector<pros::IMU*> imus, 
     std::vector<TrackingWheel*> v_wheels,
     std::vector<TrackingWheel*> h_wheels,
     double p_x, double p_y, double p_theta,
-    double r_translation, double r_heading, double q) : 
-    imus(imus),
-    v_wheels(v_wheels),
-    h_wheels(h_wheels),
-    p_x(p_x), p_y(p_y), p_theta(p_theta),
-    r_translation(r_translation), r_heading(r_heading), q(q) {}
+    double r_translation, double r_heading, double q) 
+{
+    this->imus = imus;
+    this->v_wheels = v_wheels;
+    this->h_wheels = h_wheels;
+    this->p_x = p_x;
+    this->p_y = p_y;
+    this->p_theta = p_theta;
+    this->r_translation = r_translation;
+    this->r_heading = r_heading;
+    this->q = q;
+}
 
-void Odometry::update(Pose& pose) {
-    auto h_wheel_data = get_lateral_data(h_wheels);
-    auto v_wheel_data = get_lateral_data(v_wheels);
-    auto heading = kalman_fuse_theta(imus, h_wheel_data, p_theta, r_heading, q);
+void Odometry::update(Pose& pose, uint32_t delay) {
+    uint32_t p_time = pros::millis();
 
-    if (!heading) return; // or handle error
+    while (true) {
+        uint32_t time_now = pros::millis();
+        uint32_t d_time = time_now - p_time;
 
-    double d_theta = wrap_angle(heading.value() - pose.heading);
-    auto d_translation = kalman_fuse_translation(h_wheel_data, v_wheel_data, d_theta, p_x, p_y, r_translation, q);
+        auto h_wheel_data = get_lateral_data(h_wheels);
+        auto v_wheel_data = get_lateral_data(v_wheels);
+        auto heading = kalman_fuse_theta(imus, h_wheel_data, p_theta, r_heading, q);
 
-    update_global_pose(pose, d_translation, heading.value());
+        if (!heading) {
+            // handle error (log or break the loop)
+            break;
+        }
+
+        double d_theta = wrap_angle(heading.value() - pose.heading);
+        auto d_translation = kalman_fuse_translation(h_wheel_data, v_wheel_data, d_theta, p_x, p_y, r_translation, q);
+
+        update_global_pose(pose, d_translation, heading.value());
+
+        if (d_time > delay) p_time = pros::millis();
+        uint32_t dummy_p_time = p_time;
+        pros::Task::delay_until(&dummy_p_time, delay);
+        p_time = dummy_p_time;
+    }
 }

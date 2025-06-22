@@ -1,8 +1,12 @@
 #ifndef CHASSIS_H
 #define CHASSIS_H
 
+#include "pros/imu.hpp"
 #include "pros/motor_group.hpp"
+#include "tracking/odometry.h"
+#include "tracking/tracking_wheel.h"
 #include "utils/pose.h"
+#include <cstdint>
 #include <optional>
 
 class Chassis {
@@ -18,10 +22,16 @@ public:
 
     // Odometry
     void set_pose(float x, float y, float heading);
-
     void set_pose(Pose pose);
-
-    
+    Pose get_pose();
+    void configure_odometry(
+        std::vector<TrackingWheel*> h_wheels,
+        std::vector<TrackingWheel*> v_wheels,
+        std::vector<pros::IMU*> imus, 
+        double p_x = 1.0, double p_y = 1.0, double p_theta = 0.0, 
+        double r_translation = 1e-4, double r_heading = 1e-4, double q = 1e-4
+    );
+    void start_odometry(uint32_t delay = 10); 
 
 private:
     // Devices
@@ -34,6 +44,8 @@ private:
 
     // Odometry
     Pose pose = {0.0f, 0.0f, 0.0f};
+    Odometry odometry;
+    std::optional<pros::Task> odometry_task = std::nullopt;
 };
 
 #endif // CHASSIS_H

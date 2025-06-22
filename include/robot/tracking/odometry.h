@@ -4,12 +4,13 @@
 #include "pros/imu.hpp"
 #include "tracking_wheel.h"
 #include "utils/pose.h"
+#include <cstdint>
 #include <vector>
 
 class Odometry {
     public:
-    
-        Odometry(
+            
+        void configure(
             std::vector<pros::IMU*> imus, 
             std::vector<TrackingWheel*> v_wheels,
             std::vector<TrackingWheel*> h_wheels,
@@ -21,7 +22,7 @@ class Odometry {
             double q
         );
 
-        void update(Pose& pose);
+        void update(Pose& pose, uint32_t delay);
 
     private:
         std::vector<pros::IMU*> imus;

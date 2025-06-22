@@ -13,7 +13,7 @@ double TrackingWheel::get_distance_total() {
 }
 
 double TrackingWheel::get_distance_delta() {
-    const double total = this->get_distance_total();
+    const double total = get_distance_total();
     const double delta = total - last_total;
     last_total = total;
     return delta;
