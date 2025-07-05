@@ -22,3 +22,7 @@ double TrackingWheel::get_distance_delta() {
 double TrackingWheel::get_offset() {
     return offset;
 }
+
+void TrackingWheel::tare() {
+    encoder->reset();
+}
