@@ -1,5 +1,6 @@
 #include "tracking_wheel.h"
 #include "pros/rotation.hpp"
+#include "utils/constants.h"
 #include <cmath>
 
 TrackingWheel::TrackingWheel(pros::Rotation* encoder, double diameter, double offset)
@@ -9,9 +10,8 @@ TrackingWheel::TrackingWheel(pros::Rotation* encoder, double diameter, double of
     last_total(get_distance_total()) {}
 
 double TrackingWheel::get_distance_total() {
-    // Use consistent double precision and cache M_PI calculation
-    static const double pi_over_360 = M_PI / 360.0;
-    return encoder->get_angle() * pi_over_360 * diameter;
+    // Use pre-calculated constant for better performance
+    return encoder->get_angle() * PI_OVER_360 * diameter;
 }
 
 double TrackingWheel::get_distance_delta() {

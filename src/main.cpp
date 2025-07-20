@@ -1,5 +1,6 @@
 #include "main.h"
 #include "../include/utils/devices.h"
+#include "../include/utils/motor_control.h"
 #include "pros/misc.h"
 
 void initialize() {}
@@ -23,21 +24,14 @@ void opcontrol() {
         chassis.tank(left_y, right_y);
 
         if (l2 || r2) {
-            ccw_rollers.move(-127);
-            cw_rollers.move(-127);
-            indexer.move(-127);
+            set_motors_velocity(-127, ccw_rollers, cw_rollers, indexer);
         } else if (l1) {
-            ccw_rollers.move(127);
-            cw_rollers.move(127);
-            indexer.move(127);
+            set_motors_velocity(127, ccw_rollers, cw_rollers, indexer);
         } else if (r1) {
-            ccw_rollers.move(127);
-            cw_rollers.move(127);
+            set_motors_velocity(127, ccw_rollers, cw_rollers);
             indexer.move(-127);
         } else {
-            ccw_rollers.move(0);
-            cw_rollers.move(0);
-            indexer.move(0);
+            set_motors_velocity(0, ccw_rollers, cw_rollers, indexer);
         }
 
 		pros::delay(20);                               // Run for 20 ms then update

@@ -3,6 +3,7 @@
 #include "tracking_wheel.h"
 #include "utils/angle.h"
 #include "utils/pose.h"
+#include "utils/constants.h"
 #include <cmath>
 #include <optional>
 #include <vector>
@@ -38,10 +39,9 @@ static std::optional<double> fuse_imus(const std::vector<pros::IMU*>& sensors) {
     if (sensors.empty()) return std::nullopt;
     
     double sum_sin = 0, sum_cos = 0;
-    const double deg_to_rad = M_PI / 180.0;
     
     for (const auto* sensor : sensors) {
-        double heading = sensor->get_heading() * deg_to_rad;
+        double heading = sensor->get_heading() * DEG_TO_RAD;
         sum_sin += std::sin(heading);
         sum_cos += std::cos(heading);
     }
