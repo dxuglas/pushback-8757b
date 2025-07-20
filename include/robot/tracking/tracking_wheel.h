@@ -5,16 +5,16 @@
 
 class TrackingWheel {
     public:
-        TrackingWheel(pros::Rotation* encoder, float diameter, double offset);
+        TrackingWheel(pros::Rotation* encoder, double diameter, double offset);
         double get_distance_delta();
         double get_distance_total();
         double get_offset();
         
     private:
         pros::Rotation* encoder;
-        float diameter;
-        float offset;
-        float last_total;
+        double diameter;
+        double offset;
+        double last_total;
 };
 
 #endif // TRACKING_WHEEL_H
