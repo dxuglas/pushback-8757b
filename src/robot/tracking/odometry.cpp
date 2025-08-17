@@ -1,3 +1,16 @@
+/**
+ * @file odometry.cpp
+ * 
+ * Contains implementations for Odometry tracking functions.
+ * 
+ * @copyright (c) 2025, Noah Douglas.
+ * All rights reserved.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 #include "odometry.h"
 #include "pros/imu.hpp"
 #include "pros/rtos.hpp"
@@ -14,7 +27,7 @@
  */
 struct TrackingWheelData {
     double distance; // distance delta reported by the tracking wheel
-    double total; // total distance reported by the tracking wheel
+    double total; // total distan1ce reported by the tracking wheel
     double offset; // offset of tracking wheel from tracking center
 };
 
