@@ -9,11 +9,11 @@ void initialize() {
     chassis.configure_odometry(
         {&left_h_wheel, &right_h_wheel}, 
         {}, 
-        {&left_imu});
+        {&imu});
     left_h_wheel.tare();
     right_h_wheel.tare();
-    left_imu.tare_heading();
-    while (left_imu.is_calibrating()) pros::delay(10);
+    imu.tare_heading();
+    while (imu.is_calibrating()) pros::delay(10);
     pros::delay(2000);
     pros::Task([&] {
     while (true) {
@@ -43,32 +43,32 @@ void opcontrol() {
         chassis.tank(master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y), master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y));
 
         if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
-            front_rollers.move(127);
+            intake_rollers.move(127);
             indexer.move(127);
-            top_rollers.move(24);
+            upper_stage_rollers.move(24);
         } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
-            front_rollers.move(127);
+            intake_rollers.move(127);
             indexer.move(-127);
             if (block_detector.get() < 30) {
-                top_rollers.move(-127);
+                upper_stage_rollers.move(-127);
             } else {
-                top_rollers.move(127);
+                upper_stage_rollers.move(127);
             }
-            bin_control.move(-127);
+            scoring_rollers.move(-127);
         } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
-            front_rollers.move(127);
+            intake_rollers.move(127);
             indexer.move(127);
-            top_rollers.move(127);
-            bin_control.move(127);
+            upper_stage_rollers.move(127);
+            scoring_rollers.move(127);
         } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
-            front_rollers.move(-127);
+            intake_rollers.move(-127);
             indexer.move(-127);
-            top_rollers.move(-127);
+            upper_stage_rollers.move(-127);
         } else {
-            front_rollers.move(0);
+            intake_rollers.move(0);
             indexer.move(0);
-            top_rollers.move(0);
-            bin_control.move(-30);
+            upper_stage_rollers.move(0);
+            scoring_rollers.move(-30);
         }
 
         if (master.get_digital(pros::E_CONTROLLER_DIGITAL_B) && loader_countdown < 0) {
