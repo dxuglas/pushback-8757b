@@ -14,11 +14,16 @@ Chassis::Chassis(std::initializer_list<int8_t> left_drive_motor_ports,
       l_deadzone(left_joystick_y_deadzone.value_or(0.0f)),
       r_deadzone(right_joystick_y_deadzone.value_or(0.0f)) {}
 
-void Chassis::tank(float left_joystick_y_position, float right_joystick_y_position) {
+void Chassis::tank(float left_joystick_y_position, float right_joystick_y_position, bool deadzone) {
     float left = check_threshold(left_joystick_y_position, l_deadzone);
     float right = check_threshold(right_joystick_y_position, r_deadzone);
     l_motors.move(left);
     r_motors.move(right);
+}
+
+void Chassis::tank(float left_value, float right_value) {
+    l_motors.move(left_value);
+    r_motors.move(right_value);
 }
 
 void Chassis::set_pose(float x, float y, float heading) {
@@ -31,6 +36,16 @@ void Chassis::set_pose(Pose pose) {
 
 Pose Chassis::get_pose() {
     return pose;
+}
+
+double Chassis::get_position() {
+    double position = (this->l_motors.get_position() - this->r_motors.get_position())/6*3/5*3.25;
+    return position;
+}
+
+void Chassis::reset_position() {
+    this->l_motors.tare_position();
+    this->r_motors.tare_position();
 }
 
 void Chassis::configure_odometry(

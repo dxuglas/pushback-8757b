@@ -91,11 +91,7 @@ double TrackingWheel::get_offset() {
  * @brief reset tracking wheel data
  */
 void TrackingWheel::tare() {
-    if (sensor_type == SensorType::Rotation && rotation) {
-
-        zero_position = rotation->get_position();
-    } else if (sensor_type == SensorType::Encoder && encoder) {
-        zero_position = encoder->get_value();
-    } 
+    rotation->reset_position();
+    zero_position = rotation->get_position();
     last_total = get_distance_total();
 }
