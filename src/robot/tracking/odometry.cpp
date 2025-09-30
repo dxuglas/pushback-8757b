@@ -193,7 +193,7 @@ static void update_global_pose(Pose& pose, const Delta2D& d_translation, double 
     // converts local (dx,dy) to global
     double dx_global = std::cos(avg_theta) * d_translation.dx - std::sin(avg_theta) * d_translation.dy;
     double dy_global = std::sin(avg_theta) * d_translation.dx + std::cos(avg_theta) * d_translation.dy;
-    pose.x += dx_global;
+    pose.x += dy_global;
     pose.y += dy_global;
     pose.heading = heading;
 }

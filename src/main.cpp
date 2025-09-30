@@ -2,6 +2,9 @@
 #include "../include/utils/devices.h"
 #include "pros/misc.h"
 #include "pros/rtos.hpp"
+#include "robot/control/pure_pursuit.h"
+#include "utils/pose.h"
+
 
 void initialize() {
     pros::lcd::initialize();
@@ -30,17 +33,10 @@ void competition_initialize() {}
 
 void disabled() {}
 
-void autonomous() {
-    chassis.move(127);
-    pros::delay(1000);
-    chassis.move(0);
-}
-
 void opcontrol() {
-    chassis.start_odometry();
     int loader_countdown = 0;
 	while (true) {
-        chassis.tank(master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y), master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y));
+        chassis.tank(master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y), master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y), true);
 
         if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
             intake_rollers.move(127);
@@ -62,7 +58,7 @@ void opcontrol() {
             scoring_rollers.move(127);
         } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
             intake_rollers.move(-127);
-            indexer.move(-127);
+            indexer.move(127);
             upper_stage_rollers.move(-127);
         } else {
             intake_rollers.move(0);

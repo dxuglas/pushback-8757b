@@ -24,4 +24,6 @@ extern pros::Motor indexer, intake_rollers, upper_stage_rollers, scoring_rollers
 
 extern pros::Controller master;
 
+extern int alliance, selected_auton;
+
 #endif

@@ -18,7 +18,8 @@ public:
         std::optional<float> right_joystick_y_deadzone);
 
     // User Control
-    void tank(float left_joystick_y_position, float right_joystick_y_position);
+    void tank(float left_joystick_y_position, float right_joystick_y_position, bool deadzone);
+    void tank(float left_value, float right_value);
 
     // Odometry
     void set_pose(float x, float y, float heading);
@@ -33,6 +34,8 @@ public:
     void start_odometry(uint32_t delay = 10); 
     
     void move(int voltage);
+    double get_position();
+    void reset_position();
 
 private:
     // Devices
