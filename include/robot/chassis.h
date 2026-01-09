@@ -34,13 +34,12 @@ public:
     void start_odometry(uint32_t delay = 10); 
     
     void move(int voltage);
-    double get_position();
-    void reset_position();
+
+    pros::MotorGroup l_motors;
+    pros::MotorGroup r_motors;
 
 private:
     // Devices
-    pros::MotorGroup l_motors;
-    pros::MotorGroup r_motors;
     
     // User Control
     float l_deadzone;

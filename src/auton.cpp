@@ -39,11 +39,13 @@ public:
 
     if (drive_turn_toggle)
     {
-      chassis.tank(linear_velocity, linear_velocity);
+      chassis.l_motors.move_voltage(linear_velocity);
+      chassis.r_motors.move_voltage(0.93*linear_velocity);
     }
     else
     {
-      chassis.tank(angular_velocity, -angular_velocity);
+      chassis.l_motors.move_voltage(+angular_velocity);
+      chassis.r_motors.move_voltage(-0.93*angular_velocity);
     }
     time_exit--;
   }
@@ -51,7 +53,7 @@ public:
 
   void turn_relative(double degrees)
   { // Turn relative to the current heading (in degrees)
-    time_exit = 100;
+    time_exit = 250;
     turn_reset = true;
     drive_turn_toggle = false;
     angle = degrees;
@@ -68,9 +70,9 @@ public:
 
   void turn_absolute(double heading)
   { // Turn to an absolute heading (in degrees)
-    time_exit = 200;
+    time_exit = 150;
     double degrees;
-    double difference = -chassis.get_pose().heading * 180 / M_PI - heading;
+    double difference = imu.get_heading() - heading;
     turn_reset = true;
     drive_turn_toggle = false;
 
@@ -101,8 +103,8 @@ public:
 
   void move(double distance_in_inches, double speed_percent = 100)
   { // Move the drive a set distance
-    time_exit = 100;
-    chassis.reset_position();
+    time_exit = 150;
+    drive_reset = true;
     drive_turn_toggle = true;
     distance = distance_in_inches;
     max_voltage_percent = speed_percent / 100;
@@ -125,6 +127,8 @@ public:
   void disable()
   { // Disabled the controller
     enabled = false;
+    chassis.l_motors.move_voltage(0);
+    chassis.r_motors.move_voltage(0);
   }
 
 private:
@@ -134,8 +138,8 @@ private:
   int drive_derivative = 0;
   double distance = 0;
   double max_voltage_percent = 1;
-  double drive_zero;
-  double drive_previous = 0;
+  double max_delta = 1;
+  double previous_max_voltage = 0;
 
   bool drive_reset = true;
 
@@ -144,7 +148,6 @@ private:
   int turn_integral = 0;
   int turn_derivative = 0;
   int angle = 0;
-  double turn_zero;
 
   bool turn_reset = true;
   int time_exit = 100;
@@ -159,9 +162,24 @@ private:
 
   int linear_controller()
   { // Linear PID Controller
-    double drive_position = chassis.get_position();
+    if (drive_reset)
+    { // Reset controller zero position on new move call
+      chassis.l_motors.tare_position_all();
+      chassis.r_motors.tare_position_all();
+      drive_reset = false;
+    }
 
-    drive_error = distance - drive_position;
+    // Get average drive position from position vector and convert to inches from degrees
+    double drive_average_position = (chassis.l_motors.get_position(0) + 
+                                    chassis.l_motors.get_position(1) +
+                                    chassis.l_motors.get_position(2) + 
+                                    chassis.r_motors.get_position(0) +
+                                    chassis.r_motors.get_position(1) +
+                                    chassis.r_motors.get_position(2)) / 6;
+
+    double drive_position_in_inches = (drive_average_position / 360) * 3.25 * M_PI * 3 / 5;
+
+    drive_error = distance - drive_position_in_inches;
     drive_derivative = drive_error - drive_last_error;
     drive_last_error = drive_error;
 
@@ -170,35 +188,30 @@ private:
 
     // If integral is above it's limit, decrease it to limit. 
     drive_integral = abs(drive_integral) > integral_limit ? sign_value(drive_integral) * integral_limit : drive_integral;
+    double target_voltage = drive_error * drive_kp + drive_integral * drive_ki + drive_derivative * drive_kd;
+    target_voltage *= max_voltage_percent;
 
-
-
-    double output_voltage = std::clamp(int(drive_error * drive_kp + drive_integral * drive_ki + drive_derivative * drive_kd), -127, 127) * max_voltage_percent; 
-    
-    double max_delta = 5;
-    
-    if (std::abs(output_voltage - drive_previous) > max_delta) {
-        if (output_voltage > drive_previous) {
-            output_voltage = drive_previous + max_delta;
-        } else{
-            output_voltage = drive_previous - max_delta;
-        }
+    double delta = target_voltage - previous_max_voltage;
+    if (abs(delta) > max_delta) {
+        // Clamp delta to max_delta
+        target_voltage = previous_max_voltage + sign_value(delta) * max_delta;
     }
-    drive_previous = output_voltage;
-    printf("position %f zero %f error %d voltage %f\n", drive_position, drive_zero, drive_error, output_voltage);
-    return output_voltage;
+    previous_max_voltage = target_voltage;
+
+    double output_voltage = drive_error * drive_kp + drive_integral * drive_ki + drive_derivative * drive_kd; 
+    return output_voltage * max_voltage_percent;
   }
 
   int angular_controller()
   { // Angular PID Controller
     if (turn_reset)
     { // Reset controller zero position on turn call
-      turn_zero = -chassis.get_pose().heading * 180 / M_PI;
+      imu.tare_rotation();
       turn_reset = false;
       pros::Task::delay(10);
     }
 
-    turn_error = angle - -chassis.get_pose().heading * 180 / M_PI;
+    turn_error = angle - imu.get_rotation();
     turn_derivative = turn_error - turn_last_error;
     turn_last_error = turn_error;
 
@@ -214,12 +227,12 @@ private:
 
 // Primary chassis controller for autonomous functions
 ChassisController controller(
-  6.8, // Drive Kp 
-  0.001, // Ki
-  0.2, // Kd
-  0.7, // Turn Kp
-  0.004, // Ki
-  0.04  // Kd
+  700, // Drive Kp 
+  5, // Ki
+  12, // Kd
+  92, // Turn Kp
+  0.2, // Ki
+  2.5  // Kd
 );
 
 void chassis_task_loop(void* param)
@@ -230,99 +243,97 @@ void chassis_task_loop(void* param)
   }
 }
 
-void hold() {
-    intake_rollers.move(0);
+void disable() {
+    controller.disable();
+}
+
+void intake_center() {
+    intake.move(-127);
+    rollers.move(-127);
+    indexer.move(-127);
+}
+
+void intake_middle() {
+    intake.move(-127);
+    rollers.move(-127);
+    indexer.move(127);
+}
+
+void intake_stop() {
+    intake.move(0);
+    rollers.move(0);
     indexer.move(0);
-    upper_stage_rollers.move(0);
-    scoring_rollers.move(-30);
 }
 
-void score_top() {
-    intake_rollers.move(127);
-    indexer.move(127);
-    upper_stage_rollers.move(127);
-    scoring_rollers.move(127);
-}
-
-void intake() {
-    intake_rollers.move(127);
-    indexer.move(127);
-    upper_stage_rollers.move(24);
-    scoring_rollers.move(-30);
-}
-
-void score_center() {
-    intake_rollers.move(127);
+void outake() {
+    intake.move(100);
+    rollers.move(127);
     indexer.move(-127);
-    if (block_detector.get() < 30) {
-        upper_stage_rollers.move(-127);
-    } else {
-        upper_stage_rollers.move(127);
-    }
-    scoring_rollers.move(-127);
 }
 
-void score_bottom() {
-    intake_rollers.move(-127);
-    indexer.move(-127);
-    upper_stage_rollers.move(-127);
+void right_long_goal() {
+    intake_center();
+    controller.move(18);
+    controller.move(14, 60);
+    pros::delay(400);
+    controller.turn_relative(100);
+    pros::delay(400);
+    controller.move(25, 70);
+    pros::delay(300);
+    controller.turn_relative(60);
+    scraper.toggle();
+    controller.move(10, 100);
+    controller.move(18, 100);
+    pros::delay(500);
+    controller.move(-40);
+    gate.toggle();
+}
+
+void left_long_goal() {
+    controller.move(18);
+    intake_center();
+    controller.move(12, 60);
+    pros::delay(200);
+    controller.turn_relative(-150);
+    pros::delay(200);
+    controller.move(24);
+    pros::delay(300);
+    controller.turn_relative(-60);
+    scraper.toggle();
+    pros::delay(400);
+    controller.move(10, 100);
+    controller.move(16, 100);
+    pros::delay(500);
+    controller.move(-40,80);
+    gate.toggle();
+}
+
+void right_center_goal() {
+    controller.move(18);
+    intake_center();
+    controller.move(23, 30);
+    pros::delay(100);
+    controller.turn_relative(-61);
+    pros::delay(100);
+    controller.move(16, 70);
+    pros::delay(100);
+    outake();
+    pros::delay(1500);
+    controller.move(-42);
+    pros::delay(300);
+    controller.turn_relative(-125);
+    pros::delay(200);
+    controller.move(-5);
+    intake_center();
+    scraper.toggle();
+    pros::delay(400);
+    controller.move(20, 100);
+    pros::delay(500);
+    controller.move(-40,80);
+    gate.toggle();
 }
 
 void autonomous() {
-    chassis.start_odometry();
-
-    // intake();
-    // chassis.tank(127, 127);
-    // pros::delay(320);
-    // chassis.tank(0, 0);
-    // pros::delay(600);
-    // chassis.tank(-60, 60);
-    // pros::delay(250);
-    // chassis.tank(0, 0);
-    // pros::delay(600);
-    // chassis.tank(40, 40);
-    // pros::delay(1300);
-    // chassis.tank(0, 0);
-    // pros::delay(600);
-    // chassis.tank(-40, -40);
-    // pros::delay(525);
-    // chassis.tank(0, 0);
-    // pros::delay(600);
-    // chassis.tank(60, -60);
-    // pros::delay(385);
-    // chassis.tank(0, 0);
-    // match_load_ramp.toggle();
-    // pros::delay(600);
-    // chassis.tank(40, 40);
-    // pros::delay(675);
-    // chassis.tank(0, 0);
-    // pros::delay(600);
-    // score_center();
-        
-    intake();
-    chassis.tank(127, 127);
-    pros::delay(330);
-    chassis.tank(0, 0);
-    pros::delay(600);
-    chassis.tank(60, -60);
-    pros::delay(250);
-    chassis.tank(0, 0);
-    pros::delay(600);
-    chassis.tank(40, 40);
-    pros::delay(1300);
-    chassis.tank(0, 0);
-    pros::delay(600);
-    chassis.tank(-40, -40);
-    pros::delay(600);
-    chassis.tank(0, 0);
-    pros::delay(600);
-    chassis.tank(-60, 60);
-    pros::delay(340);
-    chassis.tank(0, 0);
-    pros::delay(600);
-    chassis.tank(40, 40);
-    pros::delay(650);
-    chassis.tank(0, 0);
-    pros::delay(600);
-    score_bottom();
-}
+    pros::Task chassis_task(chassis_task_loop, (void*)"Chasis" ,"Chassis"); 
+    left_long_goal();
+};

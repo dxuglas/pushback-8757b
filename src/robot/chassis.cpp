@@ -38,16 +38,6 @@ Pose Chassis::get_pose() {
     return pose;
 }
 
-double Chassis::get_position() {
-    double position = (this->l_motors.get_position() - this->r_motors.get_position())/6*3/5*3.25;
-    return position;
-}
-
-void Chassis::reset_position() {
-    this->l_motors.tare_position();
-    this->r_motors.tare_position();
-}
-
 void Chassis::configure_odometry(
         std::vector<TrackingWheel*> h_wheels,
         std::vector<TrackingWheel*> v_wheels,

@@ -2,76 +2,86 @@
 #include "../include/utils/devices.h"
 #include "pros/misc.h"
 #include "pros/rtos.hpp"
-#include "robot/control/pure_pursuit.h"
-#include "utils/pose.h"
+#include "auton.h"
 
 
-void initialize() {
-    pros::lcd::initialize();
-    //pros::delay(2000);
-    chassis.configure_odometry(
-        {&left_h_wheel, &right_h_wheel}, 
-        {}, 
-        {&imu});
-    left_h_wheel.tare();
-    right_h_wheel.tare();
-    imu.tare_heading();
-    while (imu.is_calibrating()) pros::delay(10);
-    pros::delay(2000);
-    pros::Task([&] {
-    while (true) {
-        auto p = chassis.get_pose();
-        pros::lcd::print(0, "X: %f", p.x);
-        pros::lcd::print(1, "Y: %f", p.y);
-        pros::lcd::print(2, "Theta: %f", p.heading);
-        pros::delay(10);
-    }
-    });
-}
+void initialize() {}
 
 void competition_initialize() {}
 
 void disabled() {}
 
 void opcontrol() {
-    int loader_countdown = 0;
-	while (true) {
-        chassis.tank(master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y), master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y), true);
+    disable();
 
-        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
-            intake_rollers.move(127);
-            indexer.move(127);
-            upper_stage_rollers.move(24);
-        } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
-            intake_rollers.move(127);
-            indexer.move(-127);
-            if (block_detector.get() < 30) {
-                upper_stage_rollers.move(-127);
+    bool wrong_alliance_block = false;
+    pros::Task color_sort_task([&wrong_alliance_block] {
+        while(true) {
+            int hue = color_sort.get_hue();
+            if ((alliance == "red" && hue < 220 && hue > 140) || (alliance == "blue" && hue < 40 && hue > 0)) {
+                wrong_alliance_block = true;
+                pros::delay(20);
             } else {
-                upper_stage_rollers.move(127);
+                wrong_alliance_block = false;
             }
-            scoring_rollers.move(-127);
+            pros::delay(10);
+        }
+    });
+
+
+    pros::Task auto_gate_task([] {
+        while (true) {
+            if (gate.is_extended() && !master.get_digital(pros::E_CONTROLLER_DIGITAL_UP)) {
+                while (rear_distance.get() < 150 ) {
+                    pros::delay(20);
+                }
+                gate.retract();
+            }
+    }});
+
+	while (true) {
+        int wrong_alliance_sign = wrong_alliance_block ? 1 : -1;
+
+        chassis.tank(master.get_analog(
+                        pros::E_CONTROLLER_ANALOG_LEFT_Y), 
+                    master.get_analog(
+                        pros::E_CONTROLLER_ANALOG_RIGHT_Y));
+        
+        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+            intake.move(-127);
+            rollers.move(-127);
+            indexer.move(127*wrong_alliance_sign);
         } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
-            intake_rollers.move(127);
-            indexer.move(127);
-            upper_stage_rollers.move(127);
-            scoring_rollers.move(127);
+            intake.move(-127);
+            indexer.move(-127*wrong_alliance_sign);
+            rollers.move(-127);
         } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
-            intake_rollers.move(-127);
+            intake.move(127);
             indexer.move(127);
-            upper_stage_rollers.move(-127);
+            rollers.move(127);
         } else {
-            intake_rollers.move(0);
+            intake.move(0);
             indexer.move(0);
-            upper_stage_rollers.move(0);
-            scoring_rollers.move(-30);
+            rollers.move(0);
         }
 
-        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_B) && loader_countdown < 0) {
-            match_load_ramp.toggle();
-            loader_countdown = 10;
+        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN)) {
+            if (rear_distance.get() < 700) {
+                gate.extend();
+            }
         }
-        loader_countdown--;
-		pros::delay(20);                               // Run for 20 ms then update
+        if (master.get_digital(pros::E_CONTROLLER_DIGITAL_UP)) {
+            gate.extend();
+        }
+
+        if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
+            scraper.toggle();
+        }
+
+        if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
+            descore.toggle();
+        }
+
+		pros::delay(20); // Run for 20 ms then update
 	}
 }
