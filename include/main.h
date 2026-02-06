@@ -74,6 +74,8 @@ void opcontrol(void);
 /**
  * You can add C++-only headers here
  */
+#include "lemlib/api.hpp"
+
 //#include <iostream>
 #endif
 

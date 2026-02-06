@@ -14,8 +14,4 @@
 #ifndef AUTON_H
 #define AUTON_H
 
-#include <cstdlib>
-
-void disable();
-
 #endif
